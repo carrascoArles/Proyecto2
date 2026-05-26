@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Buscador SGI — COBRA PERU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0a0c10;
+  --surface:  #111418;
+  --surface2: #181c22;
+  --border:   #1e242d;
+  --border2:  #2a3140;
+  --accent:   #3b82f6;
+  --accent-d: #1d4ed8;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --yellow:   #eab308;
+  --orange:   #f97316;
+  --muted:    #4b5563;
+  --muted2:   #6b7280;
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.topbar-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+.topbar-sep { color: var(--border2); }
+.topbar-title { font-size: 13px; color: var(--text2); }
+.topbar-status {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted2);
+}
+.status-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); }
+.status-dot.ok { background:var(--green); box-shadow:0 0 5px var(--green); }
+.status-dot.err { background:var(--red); }
+
+/* ── LAYOUT ── */
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 48px);
+}
+
+/* ── PANEL IZQUIERDO: BÚSQUEDA ── */
+.panel-search {
+  width: 400px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-header {
+  padding: 20px 20px 0;
+  flex-shrink: 0;
+}
+.search-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted2); margin-bottom: 10px;
+}
+.search-box {
+  position: relative; margin-bottom: 12px;
+}
+#query {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 10px 42px 10px 14px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+#query:focus { border-color: var(--accent); }
+#query::placeholder { color: var(--muted); }
+#btn-search {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: var(--accent); border: none; border-radius: 4px;
+  width: 28px; height: 28px; cursor: pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition: background .15s;
+}
+#btn-search:hover { background: #60a5fa; }
+#btn-search svg { width:14px; height:14px; stroke:#fff; fill:none; stroke-width:2.5; stroke-linecap:round; }
+
+.search-opts {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.opt-item { display:flex; gap:6px; align-items:center; }
+.opt-item label { font-size:11px; color:var(--muted2); font-family:'IBM Plex Mono',monospace; }
+select {
+  background:var(--surface2); border:1px solid var(--border2); color:var(--text);
+  font-size:11px; font-family:'IBM Plex Mono',monospace;
+  padding:3px 8px; border-radius:4px; cursor:pointer; outline:none;
+}
+select:focus { border-color:var(--accent); }
+input[type=range] { accent-color:var(--accent); width:70px; }
+#alpha-val { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--accent); min-width:24px; }
+
+/* ── LISTA DE RESULTADOS ── */
+.results-scroll {
+  flex: 1; overflow-y: auto; padding: 0 12px 20px;
+}
+.results-scroll::-webkit-scrollbar { width:4px; }
+.results-scroll::-webkit-scrollbar-track { background:transparent; }
+.results-scroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+.results-count {
+  font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted2);
+  padding: 8px 8px 6px; letter-spacing:1px;
+}
+
+.result-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  animation: slideIn .2s ease both;
+}
+.result-item:hover { border-color:var(--border2); background:var(--surface2); }
+.result-item.active { border-color:var(--accent); background:rgba(59,130,246,.06); }
+@keyframes slideIn {
+  from { opacity:0; transform:translateX(-6px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+
+.ri-top { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
+.ri-name {
+  font-size:13px; font-weight:400; color:var(--text);
+  line-height:1.4; flex:1;
+}
+.ri-name mark {
+  background:rgba(59,130,246,.2); color:#93c5fd;
+  border-radius:2px; padding:0 1px;
+}
+.ext-tag {
+  font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:500;
+  padding:2px 6px; border-radius:3px; text-transform:uppercase;
+  letter-spacing:.5px; flex-shrink:0; margin-top:2px;
+}
+.ext-pdf  { background:rgba(239,68,68,.15);  color:#fca5a5; border:1px solid rgba(239,68,68,.25); }
+.ext-docx { background:rgba(59,130,246,.15); color:#93c5fd; border:1px solid rgba(59,130,246,.25); }
+.ext-doc  { background:rgba(59,130,246,.15); color:#93c5fd; border:1px solid rgba(59,130,246,.25); }
+.ext-xlsx { background:rgba(34,197,94,.15);  color:#86efac; border:1px solid rgba(34,197,94,.25); }
+.ext-xls  { background:rgba(34,197,94,.15);  color:#86efac; border:1px solid rgba(34,197,94,.25); }
+.ext-pptx { background:rgba(249,115,22,.15); color:#fdba74; border:1px solid rgba(249,115,22,.25); }
+.ext-other{ background:rgba(75,85,99,.2);    color:var(--muted2); border:1px solid var(--border2); }
+
+.ri-score {
+  display:flex; align-items:center; gap:6px; margin-bottom:6px;
+}
+.score-track { width:50px; height:2px; background:var(--border2); border-radius:99px; overflow:hidden; }
+.score-fill  { height:100%; background:var(--accent); border-radius:99px; }
+.score-num   { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted2); }
+
+/* ── ÁRBOL DE RUTA (mini) en la tarjeta ── */
+.ri-tree {
+  font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted2);
+  display:flex; align-items:center; gap:3px; flex-wrap:wrap;
+}
+.ri-tree .t-part { color:var(--muted2); }
+.ri-tree .t-sep  { color:var(--border2); }
+.ri-tree .t-file { color:var(--text2); }
+
+/* ── EMPTY / LOADING ── */
+.empty {
+  text-align:center; padding:40px 20px;
+  color:var(--muted); font-size:13px; font-family:'IBM Plex Mono',monospace;
+}
+.spinner {
+  display:inline-block; width:16px; height:16px;
+  border:2px solid var(--border2); border-top-color:var(--accent);
+  border-radius:50%; animation:spin .6s linear infinite;
+  vertical-align:middle; margin-right:6px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── PANEL DERECHO: DETALLE ── */
+.panel-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+}
+.panel-detail::-webkit-scrollbar { width:4px; }
+.panel-detail::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+.detail-empty {
+  flex:1; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:12px;
+  color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:12px;
+  text-align:center;
+}
+.detail-empty .de-icon { font-size:36px; opacity:.3; }
+
+/* ── ÁRBOL DE CARPETAS ── */
+.tree-block {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:18px 20px;
+  margin-bottom:20px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;
+  line-height:1.9;
+}
+.tree-line { display:flex; align-items:center; white-space:nowrap; }
+.tree-conn { color:var(--muted); user-select:none; margin-right:4px; }
+.tree-icon { margin-right:5px; }
+.tree-folder { color:var(--yellow); font-weight:500; }
+.tree-file   { color:var(--text);   font-weight:400; }
+.tree-file.hl{ color:#93c5fd; }  /* archivo objetivo */
+.tree-label {
+  font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:500;
+  padding:1px 5px; border-radius:2px; margin-left:8px;
+  background:rgba(59,130,246,.15); color:#93c5fd;
+  border:1px solid rgba(59,130,246,.25); text-transform:uppercase;
+  letter-spacing:.5px;
+}
+
+/* ── DETALLE: INFO ── */
+.detail-section-title {
+  font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px;
+  text-transform:uppercase; color:var(--muted2); margin-bottom:10px;
+}
+.detail-name {
+  font-family:'IBM Plex Sans',sans-serif; font-size:20px; font-weight:400;
+  color:var(--text); margin-bottom:4px; line-height:1.3;
+}
+.detail-fullname {
+  font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted2);
+  margin-bottom:20px;
+}
+
+.detail-actions { display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap; }
+.btn-primary, .btn-secondary {
+  font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:500;
+  padding:8px 16px; border-radius:5px; cursor:pointer;
+  border:1px solid; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+  transition:all .15s; letter-spacing:.5px;
+}
+.btn-primary {
+  background:var(--accent); color:#fff; border-color:var(--accent);
+}
+.btn-primary:hover { background:#60a5fa; border-color:#60a5fa; }
+.btn-secondary {
+  background:transparent; color:var(--text2); border-color:var(--border2);
+}
+.btn-secondary:hover { color:var(--text); border-color:var(--muted2); }
+
+.detail-meta {
+  display:grid; grid-template-columns:140px 1fr; gap:6px 12px;
+  font-size:12px; margin-bottom:20px;
+}
+.dm-key { color:var(--muted2); font-family:'IBM Plex Mono',monospace; }
+.dm-val { color:var(--text2); font-family:'IBM Plex Mono',monospace; word-break:break-all; }
+
+/* ── BARRA DE REINDEXAR ── */
+.reindex-bar {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.reindex-text { font-size:12px; color:var(--muted2); flex:1; }
+#btn-reindex {
+  font-family:'IBM Plex Mono',monospace; font-size:11px;
+  background:transparent; border:1px solid var(--border2);
+  color:var(--muted2); padding:6px 14px; border-radius:4px;
+  cursor:pointer; transition:all .15s;
+}
+#btn-reindex:hover { border-color:var(--orange); color:var(--orange); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <span class="topbar-logo">SGI</span>
+  <span class="topbar-sep">›</span>
+  <span class="topbar-title">Buscador de Documentos — COBRA PERU</span>
+  <div class="topbar-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">conectando...</span>
+  </div>
+</div>
+
+<!-- LAYOUT PRINCIPAL -->
+<div class="main-layout">
+
+  <!-- PANEL IZQUIERDO -->
+  <div class="panel-search">
+    <div class="search-header">
+      <div class="search-label">Búsqueda semántica multilingüe</div>
+      <div class="search-box">
+        <input id="query" type="text" autocomplete="off" spellcheck="false"
+          placeholder="Ej: solicitud de personal, PO-GAF-COI-05..."/>
+        <button id="btn-search" title="Buscar (Enter)">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+      <div class="search-opts">
+        <div class="opt-item">
+          <label>Top</label>
+          <select id="top-k">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </div>
+        <div class="opt-item">
+          <label>Semántico</label>
+          <input type="range" id="alpha" min="0" max="1" step="0.1" value="0.6"/>
+          <span id="alpha-val">0.6</span>
+        </div>
+      </div>
+    </div>
+    <div class="results-scroll" id="results-container">
+      <div class="empty">
+        <div>_ escribe para buscar</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO: DETALLE -->
+  <div class="panel-detail" id="panel-detail">
+    <div class="detail-empty">
+      <div class="de-icon">📂</div>
+      <div>Selecciona un resultado<br>para ver su ubicación y abrirlo</div>
+    </div>
+
+    <div class="reindex-bar">
+      <span class="reindex-text">¿Hay documentos nuevos en SharePoint? Re-indexa para actualizarlos.</span>
+      <button id="btn-reindex">↻ Re-indexar</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let currentResults = [];
+
+// ── STATUS ────────────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch(`${API}/status`, { method:'POST' });
+    const d = await r.json();
+    const dot  = document.getElementById('status-dot');
+    const txt  = document.getElementById('status-text');
+    if (d.ready) {
+      dot.classList.add('ok');
+      txt.textContent = `${d.documents} docs indexados`;
+    } else {
+      dot.classList.add('err');
+      txt.textContent = 'sin índice — ejecuta indexer.py';
+    }
+  } catch {
+    const dot = document.getElementById('status-dot');
+    dot.classList.add('err');
+    document.getElementById('status-text').textContent = 'backend offline';
+  }
+}
+checkStatus();
+
+// ── ALPHA ─────────────────────────────────────────────────────────────────────
+document.getElementById('alpha').addEventListener('input', e => {
+  document.getElementById('alpha-val').textContent = e.target.value;
+});
+
+// ── BUSCAR ────────────────────────────────────────────────────────────────────
+document.getElementById('btn-search').addEventListener('click', doSearch);
+document.getElementById('query').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch() {
+  const query = document.getElementById('query').value.trim();
+  if (!query) return;
+  const top_k = parseInt(document.getElementById('top-k').value);
+  const alpha = parseFloat(document.getElementById('alpha').value);
+  const container = document.getElementById('results-container');
+  container.innerHTML = `<div class="empty"><span class="spinner"></span>buscando...</div>`;
+
+  try {
+    const r = await fetch(`${API}/search`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ query, top_k, alpha }),
+    });
+    const d = await r.json();
+    currentResults = d.results;
+    renderList(d.results, query);
+    if (d.results.length > 0) showDetail(d.results[0], 0);
+  } catch {
+    container.innerHTML = `<div class="empty">❌ backend offline</div>`;
+  }
+}
+
+// ── RENDER LISTA ──────────────────────────────────────────────────────────────
+function extClass(ext) {
+  const m = { '.pdf':'ext-pdf','.docx':'ext-docx','.doc':'ext-doc',
+               '.xlsx':'ext-xlsx','.xls':'ext-xls','.pptx':'ext-pptx' };
+  return m[ext] || 'ext-other';
+}
+function extLabel(ext) { return (ext||'').replace('.','').toUpperCase() || '?'; }
+
+function buildMiniTree(tree, fullName) {
+  return tree.map((p,i) => {
+    const isLast = i === tree.length - 1;
+    return `<span class="t-part">${p}</span>${isLast ? '' : '<span class="t-sep"> › </span>'}`;
+  }).join('') + `<span class="t-sep"> › </span><span class="t-file">${fullName}</span>`;
+}
+
+function highlight(text, query) {
+  const words = query.split(/\s+/).filter(w => w.length > 2);
+  let r = text;
+  words.forEach(w => {
+    r = r.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),
+      '<mark>$1</mark>');
+  });
+  return r;
+}
+
+function renderList(results, query) {
+  const c = document.getElementById('results-container');
+  if (!results.length) {
+    c.innerHTML = `<div class="empty">sin resultados para "${query}"</div>`;
+    return;
+  }
+  c.innerHTML = `<div class="results-count">${results.length} RESULTADO${results.length>1?'S':''}</div>` +
+    results.map((r,i) => `
+      <div class="result-item" data-idx="${i}" onclick="selectResult(${i})"
+           style="animation-delay:${i*30}ms">
+        <div class="ri-top">
+          <div class="ri-name">${highlight(r.name, query)}</div>
+          <span class="ext-tag ${extClass(r.extension)}">${extLabel(r.extension)}</span>
+        </div>
+        <div class="ri-score">
+          <div class="score-track"><div class="score-fill" style="width:${r.score*100}%"></div></div>
+          <span class="score-num">${Math.round(r.score*100)}%</span>
+        </div>
+        <div class="ri-tree">${buildMiniTree(r.tree, r.full_name)}</div>
+      </div>`).join('');
+}
+
+function selectResult(idx) {
+  document.querySelectorAll('.result-item').forEach(el => el.classList.remove('active'));
+  const el = document.querySelector(`.result-item[data-idx="${idx}"]`);
+  if (el) el.classList.add('active');
+  showDetail(currentResults[idx], idx);
+}
+
+// ── ÁRBOL DE CARPETAS VISUAL ──────────────────────────────────────────────────
+function buildVisualTree(tree, fullName) {
+  /*
+    SGI/
+    └── 4. Manual Adm. y Finanzas/
+        └── Sistemas TI/
+            └── IN-SIT-MDA-01 Instructivo.pdf   ← este archivo
+  */
+  let html = '';
+  tree.forEach((part, i) => {
+    const isRoot  = i === 0;
+    const isLast  = i === tree.length - 1;
+    const indent  = '    '.repeat(i);
+    const conn    = isRoot ? '' : (isLast ? '└── ' : '└── ');
+    const prefix  = isRoot ? '' : indent;
+
+    if (isRoot) {
+      html += `<div class="tree-line">
+        <span class="tree-icon">📁</span>
+        <span class="tree-folder">${part}/</span>
+      </div>`;
+    } else {
+      const spaces = '│   '.repeat(i - 1);
+      html += `<div class="tree-line">
+        <span class="tree-conn">${spaces}${conn}</span>
+        <span class="tree-icon">📁</span>
+        <span class="tree-folder">${part}/</span>
+      </div>`;
+    }
+  });
+
+  // El archivo
+  const depth   = tree.length;
+  const spaces  = '│   '.repeat(depth - 1);
+  const ext     = fullName.split('.').pop().toLowerCase();
+  const icons   = { pdf:'📄', docx:'📝', doc:'📝', xlsx:'📊', xls:'📊', pptx:'📋' };
+  const icon    = icons[ext] || '📄';
+
+  html += `<div class="tree-line">
+    <span class="tree-conn">${spaces}└── </span>
+    <span class="tree-icon">${icon}</span>
+    <span class="tree-file hl">${fullName}</span>
+    <span class="tree-label">este archivo</span>
+  </div>`;
+
+  return html;
+}
+
+// ── PANEL DETALLE ─────────────────────────────────────────────────────────────
+function showDetail(r, idx) {
+  const panel = document.getElementById('panel-detail');
+  panel.innerHTML = `
+    <div style="margin-bottom:24px">
+      <div class="detail-section-title">Documento encontrado</div>
+      <div class="detail-name">${r.name}</div>
+      <div class="detail-fullname">${r.full_name}</div>
+      <div class="detail-actions">
+        <a class="btn-primary" href="${r.url}" target="_blank">↗ Abrir en SharePoint</a>
+        <a class="btn-secondary" href="${r.folder_url}" target="_blank">📁 Abrir carpeta</a>
+        <button class="btn-secondary" onclick="copyText('${r.url.replace(/'/g,"\\'")}', this)">⎘ Copiar link</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div class="detail-section-title">Ubicación en SharePoint</div>
+      <div class="tree-block" id="tree-display">
+        ${buildVisualTree(r.tree, r.full_name)}
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <div class="detail-section-title">Metadatos</div>
+      <div class="detail-meta">
+        <span class="dm-key">Tipo:</span>
+        <span class="dm-val">${r.extension.replace('.','').toUpperCase()}</span>
+        <span class="dm-key">Relevancia:</span>
+        <span class="dm-val">${Math.round(r.score*100)}% de coincidencia</span>
+        <span class="dm-key">Carpeta:</span>
+        <span class="dm-val">${r.folder || 'Raíz'}</span>
+        <span class="dm-key">URL directa:</span>
+        <span class="dm-val" style="font-size:10px;color:var(--muted2)">${r.url}</span>
+      </div>
+    </div>
+
+    <div class="reindex-bar">
+      <span class="reindex-text">¿Hay documentos nuevos en SharePoint? Re-indexa para actualizarlos.</span>
+      <button id="btn-reindex">↻ Re-indexar</button>
+    </div>
+  `;
+  attachReindex();
+}
+
+// ── COPIAR ────────────────────────────────────────────────────────────────────
+async function copyText(text, btn) {
+  await navigator.clipboard.writeText(text);
+  const orig = btn.textContent;
+  btn.textContent = '✓ copiado';
+  setTimeout(() => btn.textContent = orig, 1500);
+}
+
+// ── REINDEXAR ─────────────────────────────────────────────────────────────────
+function attachReindex() {
+  const btn = document.getElementById('btn-reindex');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (!confirm('¿Re-indexar la carpeta local de OneDrive?\nEsto puede tardar varios minutos.')) return;
+    btn.textContent = '⏳ indexando...'; btn.disabled = true;
+    try {
+      const r = await fetch(`${API}/reindex`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ confirm: true }),
+      });
+      const d = await r.json();
+      alert(d.message);
+      checkStatus();
+    } catch { alert('Error al re-indexar.'); }
+    btn.textContent = '↻ Re-indexar'; btn.disabled = false;
+  });
+}
+attachReindex();
+</script>
+</body>
+</html>
