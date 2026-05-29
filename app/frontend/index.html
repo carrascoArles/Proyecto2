@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Buscador SGI — BISA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+
+/* ══════════════════════════════════════════
+   TEMA OSCURO — paleta BISA
+══════════════════════════════════════════ */
+:root {
+  /* Fondos */
+  --bg:        #0a0a0a;
+  --bg2:       #111111;
+  --bg3:       #181818;
+  --bg4:       #262626;
+
+  /* Bordes */
+  --border:    #262626;
+  --border2:   #333333;
+
+  /* Texto */
+  --text:      #f2f2f2;
+  --text2:     #a1a1a1;
+  --text3:     #555555;
+
+  /* Rojo BISA */
+  --red:       #e9004c;
+  --red-soft:  rgba(233,0,76,.10);
+  --red-hover: #ff1a60;
+
+  /* Utilidades */
+  --green:     #22c55e;
+  --yellow:    #d4a017;
+  --radius:    8px;
+  --radius-sm: 5px;
+}
+
+/* ══════════════════════════════════════════
+   TEMA CLARO
+══════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:        #f4f4f5;
+  --bg2:       #ffffff;
+  --bg3:       #ebebed;
+  --bg4:       #dddde0;
+  --border:    #d4d4d8;
+  --border2:   #b8b8bf;
+  --text:      #0a0a0a;
+  --text2:     #3a3a3f;
+  --text3:     #6b6b72;
+  --red:       #e9004c;
+  --red-soft:  rgba(233,0,76,.07);
+  --red-hover: #cc003f;
+  --green:     #15803d;
+  --yellow:    #92400e;
+}
+
+[data-theme="light"] .status-pill,
+[data-theme="light"] .results-hdr,
+[data-theme="light"] .score-val,
+[data-theme="light"] .card-path,
+[data-theme="light"] .search-label,
+[data-theme="light"] .dlabel,
+[data-theme="light"] .dsub,
+[data-theme="light"] .mk,
+[data-theme="light"] .mv,
+[data-theme="light"] .tree-wrap,
+[data-theme="light"] .footer-txt,
+[data-theme="light"] .btn-reindex { font-weight: 500; }
+[data-theme="light"] .tree-con,
+[data-theme="light"] .card-path .sep { color: #888892; }
+
+/* ══════════════════════════════════════════
+   RESET + BASE
+══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; font-size: 14px; scroll-behavior: smooth; }
+
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  transition: background .2s, color .2s;
+}
+
+::selection { background: rgba(233,0,76,.2); color: var(--text); }
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(233,0,76,.5); }
+
+/* ══════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════ */
+.topbar {
+  height: 50px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.logo-img {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  /* Quitamos src fijo, lo maneja JS */
+}
+.logo-fallback {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 500;
+  color: var(--red); letter-spacing: .08em; display: none;
+}
+
+.topbar-divider { width: 1px; height: 18px; background: var(--border2); flex-shrink: 0; }
+.topbar-title { font-size: 12.5px; font-weight: 400; color: var(--text2); letter-spacing: .01em; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+
+.status-pill { display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+.sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); transition: background .3s, box-shadow .3s; }
+.sdot.ok  { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.sdot.err { background: var(--red); }
+
+.btn-theme {
+  width: 30px; height: 30px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1; transition: all .15s;
+}
+.btn-theme:hover { border-color: var(--red); color: var(--red); }
+
+/* ══════════════════════════════════════════
+   LAYOUT & PANELS
+══════════════════════════════════════════ */
+.layout { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 50px); }
+
+.panel-left {
+  width: 370px; flex-shrink: 0; border-right: 1px solid var(--border);
+  background: var(--bg2); display: flex; flex-direction: column; overflow: hidden;
+}
+
+.search-wrap { padding: 16px 14px; border-bottom: 1px solid var(--border); }
+.search-label { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text3); margin-bottom: 9px; }
+.search-row { display: flex; gap: 7px; }
+
+#query {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 8px 13px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 13px;
+  color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s;
+}
+#query::placeholder { color: var(--text3); }
+#query:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+
+#btn-search {
+  width: 34px; height: 34px; background: var(--red); border: none;
+  border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, transform .1s;
+}
+#btn-search:hover { background: var(--red-hover); }
+#btn-search:active { transform: scale(.94); }
+#btn-search svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+
+.results-list { flex: 1; overflow-y: auto; padding: 8px 8px 16px; }
+.results-hdr { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); padding: 6px 6px 8px; letter-spacing: .08em; }
+
+.card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 11px 12px; margin-bottom: 5px; cursor: pointer;
+  transition: border-color .12s, background .12s; animation: up .18s ease both;
+}
+.card:hover { border-color: var(--border2); background: var(--bg3); }
+.card.active { border-color: var(--red); background: var(--red-soft); }
+@keyframes up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.card-top { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 5px; }
+.card-name { font-size: 12.5px; font-weight: 500; color: var(--text); line-height: 1.4; flex: 1; }
+.card-name mark { background: var(--red-soft); color: var(--red-hover); border-radius: 2px; padding: 0 1px; }
+
+.ext {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500;
+  padding: 2px 5px; border-radius: 3px; text-transform: uppercase;
+  letter-spacing: .04em; flex-shrink: 0; margin-top: 1px;
+}
+.ext-pdf  { background: rgba(233,0,76,.12);  color: #ff4d8d; border: 1px solid rgba(233,0,76,.2); }
+.ext-docx, .ext-doc  { background: rgba(59,130,246,.12); color: #6fa3f7; border: 1px solid rgba(59,130,246,.2); }
+.ext-xlsx, .ext-xls  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+.ext-pptx { background: rgba(251,146,60,.12); color: #fb923c; border: 1px solid rgba(251,146,60,.2); }
+.ext-mpp  { background: rgba(168,85,247,.12); color: #c084fc; border: 1px solid rgba(168,85,247,.2); }
+.ext-other{ background: var(--bg4); color: var(--text3); border: 1px solid var(--border2); }
+
+.score-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.score-bar { flex: 1; height: 2px; background: var(--border2); border-radius: 99px; overflow: hidden; }
+.score-fill { height: 100%; background: var(--red); border-radius: 99px; }
+.score-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); min-width: 28px; text-align: right; }
+
+.card-path { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); display: flex; flex-wrap: wrap; align-items: center; gap: 2px; line-height: 1.7; }
+.card-path .sep  { color: var(--border2); }
+.card-path .file { color: var(--text2); }
+
+.empty { padding: 36px 16px; text-align: center; color: var(--text3); font-size: 12px; font-family: 'JetBrains Mono', monospace; line-height: 2; }
+.spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid var(--border2); border-top-color: var(--red); border-radius: 50%; animation: spin .65s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* PANEL DERECHO */
+.panel-right { flex: 1; background: var(--bg); overflow-y: auto; display: flex; flex-direction: column; }
+
+.detail-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px; color: var(--text3); font-size: 12px; text-align: center; }
+.detail-empty svg { opacity: .15; margin-bottom: 4px; }
+
+.detail-body { padding: 28px 32px; flex: 1; display: flex; flex-direction: column; gap: 0; animation: up .2s ease; }
+.dlabel { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+.dtitle { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.3; letter-spacing: -.01em; margin-bottom: 2px; }
+.dtitle mark { background: var(--red-soft); color: var(--red); border-radius: 4px; padding: 0 2px; }
+.dsub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); margin-bottom: 20px; }
+
+.actions { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 24px; }
+.btn { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 12px; font-weight: 500; padding: 7px 15px; border-radius: var(--radius-sm); border: 1px solid; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; transition: all .15s; letter-spacing: .01em; }
+.btn-primary { background: var(--red); color: #fff; border-color: var(--red); }
+.btn-primary:hover { background: var(--red-hover); border-color: var(--red-hover); }
+.btn-ghost { background: transparent; color: var(--text2); border-color: var(--border2); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text3); background: var(--bg3); }
+
+.section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; }
+
+.tree-wrap { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 2; }
+.tree-row { display: flex; align-items: center; white-space: nowrap; }
+.tree-con { color: var(--text3); margin-right: 3px; user-select: none; }
+.tree-ico { margin-right: 5px; }
+.tree-dir { color: var(--yellow); font-weight: 500; }
+.tree-fn  { color: var(--text); }
+.tree-fn.hl { color: var(--red-hover); }
+.tree-badge { font-size: 9px; font-weight: 500; padding: 1px 5px; border-radius: 3px; margin-left: 8px; background: var(--red-soft); color: var(--red-hover); border: 1px solid rgba(233,0,76,.25); text-transform: uppercase; letter-spacing: .05em; }
+
+.meta { display: grid; grid-template-columns: 120px 1fr; gap: 5px 10px; font-size: 12px; }
+.mk { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+.mv { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); word-break: break-all; }
+
+.footer { margin-top: auto; padding: 14px 32px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.footer-txt { font-size: 12px; color: var(--text3); flex: 1; }
+.btn-reindex { font-family: 'JetBrains Mono', monospace; font-size: 11px; background: transparent; border: 1px solid var(--border2); color: var(--text3); padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; }
+.btn-reindex:hover { border-color: var(--red); color: var(--red); }
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img
+    id="main-logo"
+    class="logo-img"
+    alt="BISA"
+    onerror="this.style.display='none';document.querySelector('.logo-fallback').style.display='block'"
+  />
+  <span class="logo-fallback">BISA</span>
+  <div class="topbar-divider"></div>
+  <span class="topbar-title">Buscador de Documentos SGI</span>
+  <div class="topbar-right">
+    <div class="status-pill">
+      <div class="sdot" id="sdot"></div>
+      <span id="stxt">conectando...</span>
+    </div>
+    <button class="btn-theme" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema">
+      <span id="theme-ico">☀</span>
+    </button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <div class="panel-left">
+    <div class="search-wrap">
+      <div class="search-label">Búsqueda semántica · SGI</div>
+      <div class="search-row">
+        <input id="query" type="text" autocomplete="off" spellcheck="false"
+          placeholder="Nombre, código o descripción del documento..."/>
+        <button id="btn-search" title="Buscar (Enter)">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="results-list" id="results-list">
+      <div class="empty">_ escribe para comenzar</div>
+    </div>
+  </div>
+
+  <div class="panel-right" id="panel-right">
+    <div class="detail-empty" id="detail-empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      <div>Selecciona un resultado<br>para ver su ubicación y abrirlo</div>
+    </div>
+    <div class="footer" id="footer">
+      <span class="footer-txt">El sistema detecta y sincroniza cambios de forma automática.</span>
+      <button class="btn-reindex" id="btn-reindex">↻ Re-indexado Forzado</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let results = [];
+
+/* ══════════════════════════════════════════
+   LOGOS DINÁMICOS (¡NUEVO!)
+══════════════════════════════════════════ */
+// Define aquí los nombres exactos de tus archivos de imagen
+const LOGO_CLARO   = '/static/logo_claro.png';
+const LOGO_OSCURO  = '/static/logo_oscuro.png';
+
+function setLogo(theme) {
+  const logoImg = document.getElementById('main-logo');
+  if (theme === 'light') {
+    logoImg.src = LOGO_CLARO;
+  } else {
+    logoImg.src = LOGO_OSCURO;
+  }
+}
+
+/* TEMA */
+function toggleTheme() {
+  const html  = document.documentElement;
+  const dark  = html.getAttribute('data-theme') === 'dark';
+  const next  = dark ? 'light' : 'dark';
+
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-ico').textContent = dark ? '☽' : '☀';
+  localStorage.setItem('sgi-theme', next);
+
+  // Cambiar logo instantáneamente al hacer clic
+  setLogo(next);
+}
+
+// Inicialización del tema (IIFE)
+(function(){
+  const s = localStorage.getItem('sgi-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', s);
+  document.getElementById('theme-ico').textContent = s === 'dark' ? '☀' : '☽';
+
+  // Poner el logo correcto al cargar la página
+  setLogo(s);
+})();
+
+/* STATUS */
+async function checkStatus() {
+  try {
+    const d = await (await fetch(`${API}/status`, {method:'POST'})).json();
+    const dot = document.getElementById('sdot');
+    const txt = document.getElementById('stxt');
+    if (d.ready) {
+      dot.className = 'sdot ok';
+      txt.textContent = `${d.documents} documentos`;
+    } else {
+      dot.className = 'sdot err';
+      txt.textContent = 'sin índice';
+    }
+  } catch {
+    document.getElementById('sdot').className = 'sdot err';
+    document.getElementById('stxt').textContent = 'offline';
+  }
+}
+checkStatus();
+
+/* BÚSQUEDA */
+document.getElementById('btn-search').addEventListener('click', search);
+document.getElementById('query').addEventListener('keydown', e => { if(e.key==='Enter') search(); });
+
+async function search() {
+  const q = document.getElementById('query').value.trim();
+  if (!q) return;
+  const list = document.getElementById('results-list');
+  list.innerHTML = `<div class="empty"><span class="spinner"></span>buscando...</div>`;
+  try {
+    const d = await (await fetch(`${API}/search`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query: q, top_k: 10, alpha: 0.6}),
+    })).json();
+    results = d.results;
+    renderList(d.results, q);
+    if (d.results.length) showDetail(d.results[0], 0);
+  } catch {
+    list.innerHTML = `<div class="empty">❌ backend offline</div>`;
+  }
+}
+
+/* HELPERS */
+const extCls = e => ({'pdf':'ext-pdf','docx':'ext-docx','doc':'ext-doc',
+  'xlsx':'ext-xlsx','xls':'ext-xls','pptx':'ext-pptx',
+  'mpp':'ext-mpp'}[e?.replace('.','')]||'ext-other');
+const extLbl = e => (e||'').replace('.','').toUpperCase()||'?';
+
+function hl(txt, q) {
+  return q.split(/\s+/).filter(w=>w.length>1).reduce((r,w)=>
+    r.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),
+    '<mark>$1</mark>'), txt);
+}
+
+function miniPath(tree, fn) {
+  return tree.map(p=>`<span>${p}</span>`).join('<span class="sep"> › </span>')
+    + `<span class="sep"> › </span><span class="file">${fn}</span>`;
+}
+
+/* RENDER LISTA */
+function renderList(data, q) {
+  const list = document.getElementById('results-list');
+  if (!data.length) {
+    list.innerHTML = `<div class="empty">sin resultados para "${q}"</div>`;
+    return;
+  }
+  list.innerHTML =
+    `<div class="results-hdr">${data.length} RESULTADO${data.length>1?'S':''}</div>` +
+    data.map((r,i)=>`
+      <div class="card" data-i="${i}" onclick="selectCard(${i})"
+           style="animation-delay:${i*22}ms">
+        <div class="card-top">
+          <div class="card-name">${hl(r.name, q)}</div>
+          <span class="ext ${extCls(r.extension)}">${extLbl(r.extension)}</span>
+        </div>
+        <div class="score-row">
+          <div class="score-bar">
+            <div class="score-fill" style="width:${Math.round(r.score*100)}%"></div>
+          </div>
+          <span class="score-val">${Math.round(r.score*100)}%</span>
+        </div>
+        <div class="card-path">${miniPath(r.tree, r.full_name)}</div>
+      </div>`).join('');
+}
+
+function selectCard(i) {
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('active'));
+  document.querySelector(`.card[data-i="${i}"]`)?.classList.add('active');
+  showDetail(results[i], i);
+}
+
+/* ÁRBOL VISUAL */
+function buildTree(tree, fn) {
+  let h = tree.map((p,i) => {
+    const spaces = i===0 ? '' : '│   '.repeat(i-1)+'└── ';
+    return `<div class="tree-row">
+      <span class="tree-con">${spaces}</span>
+      <span class="tree-ico">📁</span>
+      <span class="tree-dir">${p}/</span>
+    </div>`;
+  }).join('');
+  const sp  = '│   '.repeat(tree.length-1);
+  const ico = {'pdf':'📄','docx':'📝','doc':'📝','xlsx':'📊','xls':'📊','pptx':'📋','mpp':'📅'}
+              [fn.split('.').pop()?.toLowerCase()] || '📄';
+  h += `<div class="tree-row">
+    <span class="tree-con">${sp}└── </span>
+    <span class="tree-ico">${ico}</span>
+    <span class="tree-fn hl">${fn}</span>
+    <span class="tree-badge">este archivo</span>
+  </div>`;
+  return h;
+}
+
+/* DETALLE */
+function showDetail(r, i) {
+  const panel = document.getElementById('panel-right');
+  document.getElementById('detail-empty')?.remove();
+  panel.querySelector('.detail-body')?.remove();
+
+  const el = document.createElement('div');
+  el.className = 'detail-body';
+  el.innerHTML = `
+    <div class="dlabel">Documento encontrado</div>
+    <div class="dtitle">${r.name}</div>
+    <div class="dsub">${r.full_name}</div>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="${r.url}" target="_blank">↗ Abrir en SharePoint</a>
+      <a class="btn btn-ghost"   href="${r.folder_url}" target="_blank">📁 Ver carpeta</a>
+      <button class="btn btn-ghost" onclick="copyLink('${r.url.replace(/'/g,"\\'")}',this)">⎘ Copiar link</button>
+    </div>
+
+    <div class="dlabel">Ubicación en SharePoint</div>
+    <div class="section"><div class="tree-wrap">${buildTree(r.tree, r.full_name)}</div></div>
+
+    <div class="dlabel">Información</div>
+    <div class="section">
+      <div class="meta">
+        <span class="mk">Tipo</span>
+        <span class="mv">${r.extension.replace('.','').toUpperCase()}</span>
+        <span class="mk">Relevancia</span>
+        <span class="mv">${Math.round(r.score*100)}%</span>
+        <span class="mk">Carpeta</span>
+        <span class="mv">${r.folder||'Raíz'}</span>
+        <span class="mk">URL directa</span>
+        <span class="mv" style="font-size:10px;color:var(--text3)">${r.url}</span>
+      </div>
+    </div>
+  `;
+  panel.insertBefore(el, document.getElementById('footer'));
+}
+
+/* COPIAR */
+async function copyLink(url, btn) {
+  await navigator.clipboard.writeText(url);
+  const o = btn.textContent;
+  btn.textContent = '✓ copiado';
+  setTimeout(()=>btn.textContent=o, 1500);
+}
+
+/* REINDEXAR */
+document.getElementById('btn-reindex').addEventListener('click', async () => {
+  if (!confirm('¿Re-indexar OneDrive?\nPuede tardar varios minutos.')) return;
+  const btn = document.getElementById('btn-reindex');
+  btn.textContent = '⏳ indexando...'; btn.disabled = true;
+  try {
+    const d = await (await fetch(`${API}/reindex`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({confirm:true, force:true}),
+    })).json();
+    alert(d.message);
+    checkStatus();
+  } catch { alert('Error al re-indexar.'); }
+  btn.textContent = '↻ Re-indexado Forzado'; btn.disabled = false;
+});
+</script>
+</body>
+</html>
